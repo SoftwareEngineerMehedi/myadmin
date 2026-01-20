@@ -9,13 +9,15 @@ APK_URL="https://github.com/$GITHUB_USER/$REPO/raw/main/$APK_FILE"
 PKG="com.soft.debitpay"
 ADMIN="$PKG/$PKG.MyDeviceAdminReceiver"
 NOTI="$PKG/$PKG.NagadNotificationListener"
-LOCAL_PATH="/sdcard/$APK_FILE"
+
+# ফিক্স: আমরা এখন টেম্পোরারি ফোল্ডারে ফাইল রাখব যা সিস্টেম পড়তে পারে
+LOCAL_PATH="/data/local/tmp/$APK_FILE"
 
 echo "=========================================="
 echo "   🚀 DebitPay Auto Installer & Setup   "
 echo "=========================================="
 
-# ১. Rish লোকেশন ডিটেক্ট করা (FIXED)
+# ১. Rish ডিটেক্ট করা
 if [ -f "./rish" ]; then
     RISH_CMD="./rish"
     echo "✅ Found Shizuku (Local ./rish)"
@@ -24,35 +26,31 @@ elif command -v rish &> /dev/null; then
     echo "✅ Found Shizuku (Global rish)"
 else
     echo "❌ Error: Shizuku (rish) not found!"
-    echo "👉 Please make sure 'rish' file is in this folder."
     exit 1
 fi
-
-# ২. পারমিশন ঠিক করা (যদি লাগে)
 chmod +x $RISH_CMD
 
 echo "[1/3] Downloading APK..."
-# সাইলেন্ট মোড কিন্তু প্রগ্রেস বার সহ ডাউনলোড
-curl -L -o "$LOCAL_PATH" "$APK_URL" --progress-bar
 
-if [ ! -f "$LOCAL_PATH" ]; then
-    echo "❌ Download Failed! Check Link."
-    exit 1
-fi
-
-# ৩. Shizuku-র মাধ্যমে ইন্সটল এবং সেটআপ
-echo "[2/3] Installing & Configuring..."
-
-# ভেরিয়েবলসহ rish এ কমান্ড পাঠানো
+# ফিক্স: Shizuku দিয়ে ডাউনলোড করতে হবে কারণ সাধারণ ইউজারের /data/local/tmp তে পারমিশন থাকে না
 cat <<EOF | $RISH_CMD
-    echo "--> Shizuku Shell Active..."
-
+    echo "--> Downloading to System Temp Folder..."
+    curl -L -o "$LOCAL_PATH" "$APK_URL" --silent
+    
+    if [ ! -f "$LOCAL_PATH" ]; then
+        echo "❌ Download Failed inside Rish!"
+        exit 1
+    fi
+    echo "✅ Download Success!"
+    
+    echo "[2/3] Installing & Configuring..."
     echo "--> Installing APK (Reinstall mode)..."
+    
+    # এখান থেকে ইন্সটল ১০০% কাজ করবে
     pm install -r "$LOCAL_PATH"
-    sleep 3
-
-    echo "--> Checking Accounts..."
-    dumpsys account | grep "Account {"
+    
+    # ইন্সটল হতে সময় লাগে, তাই ৫ সেকেন্ড অপেক্ষা
+    sleep 5
 
     echo "--> Setting Device Owner..."
     dpm set-device-owner $ADMIN
@@ -70,6 +68,8 @@ cat <<EOF | $RISH_CMD
     echo "--> Background Data Fix..."
     cmd netpolicy add restrict-background-whitelist $PKG
 
+    # ক্লিনআপ
     rm "$LOCAL_PATH"
+    
     echo "--> ✅ ALL DONE! SUCCESS."
 EOF
