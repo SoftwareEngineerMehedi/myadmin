@@ -31,7 +31,7 @@ else
 fi
 chmod +x $RISH_CMD
 
-# ২. ডাউনলোড (Termux দিয়ে - কারণ এখানে CURL আছে)
+# ২. ডাউনলোড (Termux দিয়ে - কারণ এখানে CURL আছে)
 echo "[1/3] Downloading APK..."
 curl -L -o "$SDCARD_PATH" "$APK_URL" --progress-bar
 
@@ -41,18 +41,18 @@ if [ ! -f "$SDCARD_PATH" ]; then
 fi
 echo "✅ Download Complete in SD Card!"
 
-# ৩. ইন্সটল ও সেটআপ (Shizuku দিয়ে - কারণ এখানে PM আছে)
+# ৩. ইন্সটল ও সেটআপ (Shizuku দিয়ে - কারণ এখানে PM আছে)
 echo "[2/3] Installing & Configuring..."
 
+# নিচের ব্লকে $ চিহ্ন ব্যবহার করলে Termux ভেরিয়েবল বুঝবে, আর \$ ব্যবহার করলে Shizuku ভেরিয়েবল বুঝবে
 cat <<EOF | $RISH_CMD
     echo "--> Moving APK to System Temp..."
-    # সিস্টেম ফোল্ডারে কপি করা হচ্ছে যাতে ইন্সটল এরর না দেয়
     cp "$SDCARD_PATH" "$TEMP_PATH"
     
     echo "--> Installing APK (Reinstall mode)..."
     pm install -r "$TEMP_PATH"
     
-    # ইন্সটল হতে সময় লাগে
+    # ইন্সটল হতে একটু সময় দেয়া
     sleep 5
 
     echo "--> Setting Device Owner..."
@@ -69,7 +69,15 @@ cat <<EOF | $RISH_CMD
     settings put secure enabled_notification_listeners $NOTI
 
     echo "--> Background Data Fix..."
-    cmd netpolicy add restrict-background-whitelist $PKG
+    # 🔥 ফিক্স: অ্যাপের UID নম্বর বের করে ডাটা সেভার রিমুভ করা
+    MY_UID=\$(pm list packages -U $PKG | sed -n 's/.*uid://p')
+    
+    if [ ! -z "\$MY_UID" ]; then
+        cmd netpolicy add restrict-background-whitelist \$MY_UID
+        echo "    ✅ Fixed for UID: \$MY_UID"
+    else
+        echo "    ⚠️ Skipped (UID not found)"
+    fi
 
     # ক্লিনআপ (ফাইল ডিলিট)
     rm "$TEMP_PATH"
