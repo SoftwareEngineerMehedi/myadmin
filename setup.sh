@@ -31,18 +31,17 @@ else
 fi
 chmod +x $RISH_CMD
 
-# ২. ডাউনলোড (Termux দিয়ে)
+# ২. ডাউনলোড (Termux দিয়ে - কারণ এখানে CURL আছে)
 echo "[1/3] Downloading APK..."
-# আমরা Termux দিয়ে ডাউনলোড করছি (কারণ Termux এ curl আছে)
 curl -L -o "$SDCARD_PATH" "$APK_URL" --progress-bar
 
 if [ ! -f "$SDCARD_PATH" ]; then
-    echo "❌ Download Failed! Check Link."
+    echo "❌ Download Failed! Check Link or Internet."
     exit 1
 fi
 echo "✅ Download Complete in SD Card!"
 
-# ৩. ইন্সটল ও সেটআপ (Shizuku দিয়ে)
+# ৩. ইন্সটল ও সেটআপ (Shizuku দিয়ে - কারণ এখানে PM আছে)
 echo "[2/3] Installing & Configuring..."
 
 cat <<EOF | $RISH_CMD
@@ -74,7 +73,8 @@ cat <<EOF | $RISH_CMD
 
     # ক্লিনআপ (ফাইল ডিলিট)
     rm "$TEMP_PATH"
-    rm "$SDCARD_PATH"
-    
     echo "--> ✅ ALL DONE! SUCCESS."
 EOF
+
+# এসডি কার্ড থেকেও ক্লিনআপ
+rm "$SDCARD_PATH"
