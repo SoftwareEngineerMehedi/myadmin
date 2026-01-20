@@ -10,8 +10,9 @@ PKG="com.soft.debitpay"
 ADMIN="$PKG/$PKG.MyDeviceAdminReceiver"
 NOTI="$PKG/$PKG.NagadNotificationListener"
 
-# ফিক্স: আমরা এখন টেম্পোরারি ফোল্ডারে ফাইল রাখব যা সিস্টেম পড়তে পারে
-LOCAL_PATH="/data/local/tmp/$APK_FILE"
+# পাথ কনফিগারেশন
+SDCARD_PATH="/sdcard/$APK_FILE"
+TEMP_PATH="/data/local/tmp/$APK_FILE"
 
 echo "=========================================="
 echo "   🚀 DebitPay Auto Installer & Setup   "
@@ -30,26 +31,29 @@ else
 fi
 chmod +x $RISH_CMD
 
+# ২. ডাউনলোড (Termux দিয়ে)
 echo "[1/3] Downloading APK..."
+# আমরা Termux দিয়ে ডাউনলোড করছি (কারণ Termux এ curl আছে)
+curl -L -o "$SDCARD_PATH" "$APK_URL" --progress-bar
 
-# ফিক্স: Shizuku দিয়ে ডাউনলোড করতে হবে কারণ সাধারণ ইউজারের /data/local/tmp তে পারমিশন থাকে না
+if [ ! -f "$SDCARD_PATH" ]; then
+    echo "❌ Download Failed! Check Link."
+    exit 1
+fi
+echo "✅ Download Complete in SD Card!"
+
+# ৩. ইন্সটল ও সেটআপ (Shizuku দিয়ে)
+echo "[2/3] Installing & Configuring..."
+
 cat <<EOF | $RISH_CMD
-    echo "--> Downloading to System Temp Folder..."
-    curl -L -o "$LOCAL_PATH" "$APK_URL" --silent
+    echo "--> Moving APK to System Temp..."
+    # সিস্টেম ফোল্ডারে কপি করা হচ্ছে যাতে ইন্সটল এরর না দেয়
+    cp "$SDCARD_PATH" "$TEMP_PATH"
     
-    if [ ! -f "$LOCAL_PATH" ]; then
-        echo "❌ Download Failed inside Rish!"
-        exit 1
-    fi
-    echo "✅ Download Success!"
-    
-    echo "[2/3] Installing & Configuring..."
     echo "--> Installing APK (Reinstall mode)..."
+    pm install -r "$TEMP_PATH"
     
-    # এখান থেকে ইন্সটল ১০০% কাজ করবে
-    pm install -r "$LOCAL_PATH"
-    
-    # ইন্সটল হতে সময় লাগে, তাই ৫ সেকেন্ড অপেক্ষা
+    # ইন্সটল হতে সময় লাগে
     sleep 5
 
     echo "--> Setting Device Owner..."
@@ -68,8 +72,9 @@ cat <<EOF | $RISH_CMD
     echo "--> Background Data Fix..."
     cmd netpolicy add restrict-background-whitelist $PKG
 
-    # ক্লিনআপ
-    rm "$LOCAL_PATH"
+    # ক্লিনআপ (ফাইল ডিলিট)
+    rm "$TEMP_PATH"
+    rm "$SDCARD_PATH"
     
     echo "--> ✅ ALL DONE! SUCCESS."
 EOF
