@@ -26,7 +26,7 @@ elif command -v rish &> /dev/null; then
     RISH_CMD="rish"
     echo "✅ Found Shizuku (Global rish)"
 else
-    echo "❌ Error: Shizuku (rish) not found!"
+    echo "❌ Error 7: Shizuku (rish) not found!"
     exit 1
 fi
 chmod +x $RISH_CMD
